@@ -1,8 +1,13 @@
 const dataService = require('../services/dataService');
 
-// Helper to simulate artificial delay
-const simulateDelay = (min = 100, max = 500) => {
-  const delay = Math.floor(Math.random() * (max - min + 1)) + min;
+// Helper to simulate artificial delay or manual latency injection
+const simulateDelay = (req, min = 100, max = 500) => {
+  let delay;
+  if (req.query.delay) {
+    delay = parseInt(req.query.delay);
+  } else {
+    delay = Math.floor(Math.random() * (max - min + 1)) + min;
+  }
   return new Promise(resolve => setTimeout(resolve, delay));
 };
 
@@ -17,7 +22,7 @@ const simulateFailure = (req) => {
 
 const getData = async (req, res, next) => {
   try {
-    await simulateDelay();
+    await simulateDelay(req);
     simulateFailure(req);
 
     const data = await dataService.getAllData();
@@ -34,7 +39,7 @@ const getData = async (req, res, next) => {
 
 const createData = async (req, res, next) => {
   try {
-    await simulateDelay(200, 600); // POST might be slightly slower
+    await simulateDelay(req, 200, 600); // POST might be slightly slower
     simulateFailure(req);
 
     const newItem = await dataService.addData(req.body);

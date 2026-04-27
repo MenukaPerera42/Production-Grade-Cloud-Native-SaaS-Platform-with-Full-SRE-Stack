@@ -1,0 +1,53 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: api-server-alerts
+  labels:
+    release: prometheus-stack
+spec:
+  groups:
+  - name: api-server.rules
+    rules:
+    - alert: APIHighErrorRate
+      expr: |
+        sum(rate(http_requests_total{status=~"5.."}[5m])) 
+        / 
+        sum(rate(http_requests_total[5m])) > 0.05
+      for: 2m
+      labels:
+        severity: critical
+      annotations:
+        summary: "High Error Rate on {{ $labels.app }}"
+        description: "The error rate for {{ $labels.app }} is above 5% (currently {{ $value | printf \"%.2f\" }}%)."
+
+    - alert: APILatencyHigh
+      expr: |
+        histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 2
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High Latency on {{ $labels.app }}"
+        description: "P95 response time for {{ $labels.app }} is above 2s (currently {{ $value | printf \"%.2f\" }}s)."
+
+    - alert: APIPodCrashing
+      expr: |
+        rate(kube_pod_container_status_restarts_total{pod=~"api-server.*"}[15m]) > 0
+      for: 2m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Pod Crashing: {{ $labels.pod }}"
+        description: "Pod {{ $labels.pod }} has restarted multiple times in the last 15 minutes."
+
+    - alert: APICPUUsageHigh
+      expr: |
+        sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{pod=~"api-server.*"}) 
+        / 
+        sum(kube_pod_container_resource_limits{pod=~"api-server.*", resource="cpu"}) > 0.8
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High CPU Usage on {{ $labels.app }}"
+        description: "CPU usage for {{ $labels.app }} is above 80% of its limit."
