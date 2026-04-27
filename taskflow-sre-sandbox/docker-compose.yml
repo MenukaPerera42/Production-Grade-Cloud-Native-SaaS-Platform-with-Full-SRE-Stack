@@ -1,0 +1,57 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: taskflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./infra/db-init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  api-server:
+    build:
+      context: ./apps/api-server
+    environment:
+      - PORT=3000
+      - REDIS_URL=redis://redis:6379
+      - DB_URL=postgresql://user:password@postgres:5432/taskflow
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+      - redis
+
+  worker:
+    build:
+      context: ./apps/worker
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DB_URL=postgresql://user:password@postgres:5432/taskflow
+    depends_on:
+      - redis
+      - postgres
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+
+  frontend:
+    build:
+      context: ./apps/frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - api-server
