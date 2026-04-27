@@ -6,15 +6,26 @@ function App() {
   const submitTask = async () => {
     try {
       setStatus('Submitting...')
-      const res = await fetch('/api/tasks', {
+      const res = await fetch('/api/data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'report', payload: { foo: 'bar' } })
+        body: JSON.stringify({ name: 'Simulated Task Payload' })
       })
-      const data = await res.json()
-      setStatus(`Task Submitted: ID ${data.id}`)
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => res.statusText || 'Unknown error')
+        setStatus('Error submitting task: ' + text)
+        return
+      }
+
+      const respData = await res.json().catch(() => null)
+      if (respData && respData.success) {
+        setStatus(`Task Submitted: ID ${respData.data.id}`)
+      } else {
+        setStatus('Error submitting task: invalid server response')
+      }
     } catch (e) {
-      setStatus('Error submitting task')
+      setStatus('Error submitting task: ' + e.message)
     }
   }
 
