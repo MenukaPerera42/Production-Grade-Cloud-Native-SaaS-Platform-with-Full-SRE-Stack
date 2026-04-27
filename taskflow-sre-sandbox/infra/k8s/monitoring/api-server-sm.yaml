@@ -1,0 +1,14 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: api-server-monitor
+  labels:
+    release: prometheus-stack # Adjust if your Helm release name is different
+spec:
+  selector:
+    matchLabels:
+      app: api-server
+  endpoints:
+  - port: http-metrics
+    path: /metrics
+    interval: 15s
